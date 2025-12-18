@@ -4,6 +4,8 @@ import { extractTextFromPDF } from '@/lib/pdf';
 import { chunkText } from '@/lib/chunking';
 import { getEmbeddings } from '@/lib/openai';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
     const documentId = params.id;
 
