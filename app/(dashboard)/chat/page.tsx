@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Send, User, Sparkles, BookOpen, ChevronRight, StopCircle } from 'lucide-react';
 
 type Message = {
     role: 'user' | 'assistant';
@@ -13,6 +14,7 @@ export default function ChatPage() {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const WORKSPACE_ID = "default-workspace";
 
     // Auto-scroll
@@ -20,7 +22,12 @@ export default function ChatPage() {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages]);
+    }, [messages, loading]);
+
+    // Focus input on mount
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -47,83 +54,155 @@ export default function ChatPage() {
             }]);
         } catch (err) {
             console.error(err);
-            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error connecting to the knowledge base." }]);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+        <div className="flex flex-col h-full relative z-10">
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Workspace Chat</h2>
+            <div className="px-8 py-6 flex items-center gap-3 backdrop-blur-sm sticky top-0 z-20">
+                <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-700 text-blue-600">
+                    <Sparkles size={20} fill="currentColor" className="opacity-20 text-blue-600" />
+                    <Sparkles size={20} className="absolute text-blue-600" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">AI Assistant</h2>
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        Online & Ready
+                    </p>
+                </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6" ref={scrollRef}>
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-4 space-y-8 scroll-smooth" ref={scrollRef}>
                 {messages.length === 0 && (
-                    <div className="text-center text-gray-500 mt-20">
-                        <p className="text-lg">Ask me anything about your documents!</p>
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards" style={{ animationDelay: '0.2s' }}>
+                        <div className="w-24 h-24 bg-gradient-to-tr from-blue-100 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/20 rounded-3xl flex items-center justify-center mb-8 shadow-inner ring-1 ring-black/5 dark:ring-white/10">
+                            <BookOpen size={40} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">What would you like to know?</h3>
+                        <p className="text-gray-500 max-w-md mx-auto leading-relaxed">
+                            I can answer questions based on your uploaded PDF documents.
+                            Try asking about specific details, summaries, or cross-document comparisons.
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-12 w-full max-w-2xl">
+                            {['Summarize the latest product catalog', 'What are the safety protocols?', 'Compare price lists for 2024'].map((suggestion, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setInput(suggestion)}
+                                    className="p-4 text-sm text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 hover:shadow-md transition-all text-gray-600 dark:text-gray-300"
+                                >
+                                    {suggestion}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
 
                 {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-2xl p-4 rounded-lg shadow-sm border ${msg.role === 'user'
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-gray-50 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700'
-                            }`}>
-                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    <div key={i} className={`flex gap-4 max-w-4xl mx-auto ${msg.role === 'user' ? 'justify-end' : ''} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
 
-                            {/* Sources */}
-                            {msg.sources && msg.sources.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-gray-200/20">
-                                    <p className="text-xs font-semibold opacity-70 mb-2">Sources:</p>
-                                    <div className="space-y-2">
-                                        {msg.sources.map((src, idx) => (
-                                            <div key={idx} className="bg-gray-100 dark:bg-gray-700/50 p-2 rounded text-xs border border-gray-200 dark:border-gray-700">
-                                                <div className="font-medium text-blue-600 dark:text-blue-400">
-                                                    📄 {src.documentName} (Page {src.page})
-                                                </div>
-                                                <div className="mt-1 italic opacity-80 line-clamp-2">
-                                                    "{src.quote}"
-                                                </div>
+                        {msg.role === 'assistant' && (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex-shrink-0 flex items-center justify-center shadow-md mt-1">
+                                <Sparkles size={14} className="text-white" />
+                            </div>
+                        )}
+
+                        <div className={`space-y-2 max-w-[85%] ${msg.role === 'user' ? 'order-1' : 'order-2'}`}>
+                            {msg.role === 'user' ? (
+                                <div className="bg-blue-600 text-white px-6 py-3.5 rounded-2xl rounded-tr-sm shadow-md text-[15px] leading-relaxed">
+                                    {msg.content}
+                                </div>
+                            ) : (
+                                <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-6 py-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-800 dark:text-gray-200 text-[15px] leading-7">
+                                    {msg.content}
+
+                                    {/* Citations */}
+                                    {msg.sources && msg.sources.length > 0 && (
+                                        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700/50">
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                <BookOpen size={12} /> Sources Verified
+                                            </p>
+                                            <div className="grid gap-2">
+                                                {msg.sources.map((src, idx) => (
+                                                    <div key={idx} className="group flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700/50 hover:border-blue-200 dark:hover:border-blue-500/30 transition-colors cursor-help">
+                                                        <div className="mt-0.5 min-w-[20px] h-5 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                                                            {idx + 1}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-baseline justify-between gap-2">
+                                                                <h4 className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                                                                    {src.documentName}
+                                                                </h4>
+                                                                <span className="text-[10px] text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-100 dark:border-gray-700">Page {src.page}</span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 mt-1 italic line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+                                                                "{src.quote}"
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
+
+                        {msg.role === 'user' && (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center mt-1">
+                                <User size={14} className="text-gray-500 dark:text-gray-400" />
+                            </div>
+                        )}
                     </div>
                 ))}
+
                 {loading && (
-                    <div className="flex justify-start">
-                        <div className="bg-gray-100 p-4 rounded-lg animate-pulse">
-                            Thinking...
+                    <div className="flex gap-4 max-w-4xl mx-auto animate-pulse">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex-shrink-0 flex items-center justify-center opacity-50">
+                            <Sparkles size={14} className="text-white" />
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-6 py-4 rounded-2xl rounded-tl-sm shadow-sm">
+                            <div className="flex gap-1.5">
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Input */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-                <form onSubmit={handleSend} className="max-w-4xl mx-auto flex gap-4">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Search your knowledge base..."
-                        className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none dark:bg-gray-800 dark:border-gray-700"
-                    />
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                    >
-                        Send
-                    </button>
-                </form>
+            {/* Input Area */}
+            <div className="p-6 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent dark:from-[#0B1120] dark:via-[#0B1120] sticky bottom-0 z-30">
+                <div className="max-w-4xl mx-auto relative group">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl opacity-20 group-hover:opacity-100 transition duration-500 blur"></div>
+                    <form onSubmit={handleSend} className="relative flex items-center bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 pl-4 transition-all focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/30">
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Ask a follow up..."
+                            className="flex-1 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-400 text-base py-3"
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading || !input.trim()}
+                            className="p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg transition-all duration-200 shadow-sm transform hover:scale-105 active:scale-95"
+                        >
+                            {loading ? <StopCircle size={20} /> : <Send size={20} />}
+                        </button>
+                    </form>
+                    <div className="text-center mt-3">
+                        <p className="text-[10px] text-gray-400">AI can make mistakes. Please verify important information.</p>
+                    </div>
+                </div>
             </div>
         </div>
     );

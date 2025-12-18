@@ -52,6 +52,11 @@ export function chunkText(pages: { pageNumber: number; content: string }[], opti
             // Move straight to actualEnd for next chunk, then backtrack by overlap
             start = actualEnd - options.overlap;
 
+            // If we've reached the end of the content, stop
+            if (actualEnd === pageContent.length) {
+                break;
+            }
+
             // Prevent infinite loop if overlap >= maxLength (shouldn't happen with default)
             // Also ensure we consistently move forward
             if (start < 0) start = 0;
