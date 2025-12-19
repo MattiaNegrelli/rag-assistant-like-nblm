@@ -1,80 +1,53 @@
-# Proprietary RAG System (MVP)
+# Yuri RAG Workspace - Proprietary AI Assistant
 
-A custom Retrieval-Augmented Generation system built with Next.js App Router, Prisma, Postgres (`pgvector`), and OpenAI.
-Designed for 1-to-1 client projects with distinct workspaces.
+An Enterprise RAG (Retrieval-Augmented Generation) system built for **Mattia Negrelli** to analyze proprietary PDFs and product catalogs. This system allows clients to upload their knowledge base and chat with it using an AI assistant that cites its sources.
 
-## Features
+**Stack:** Next.js (App Router), Prisma, Neon Postgres (pgvector), Vercel Blob, OpenAI.
 
-- **Upload**: Drag & drop PDF uploading (stored in Vercel Blob).
-- **Ingestion**: Auto-extraction of text, chunking, and vector embedding generation (OpenAI `text-embedding-3-small`).
-- **Storage**: Vector storage in Postgres using `pgvector`.
-- **Chat**: RAG-based Q&A with strict source citation (Document Name + Page Number).
-- **Tenant Isolation**: All queries filtered by `workspaceId`.
+## 🚀 Features
 
-## Prerequisites
+*   **Secure Dashboard:** Protected by an `ADMIN_KEY` middleware.
+*   **Knowledge Base:** Drag & Drop PDF upload w/ status tracking.
+*   **Ingestion Pipeline:**
+    *   Extracts text using `pdf-parse`.
+    *   Smart chunking with overlap logic.
+    *   Embeddings via OpenAI `text-embedding-3-small`.
+    *   Vector storage in Postgres (pgvector).
+*   **RAG Chat:**
+    *   Semantic search using cosine similarity.
+    *   Strict "Answer from context only" prompting.
+    *   Source citations (Document + Page number + Quote).
 
-1. **Node.js**: v18+
-2. **PostgreSQL Database**: Must support extensions. (Recommended: Neon.tech)
-3. **OpenAI API Key**: With access to embeddings and GPT-4o-mini.
-4. **Vercel Blob**: Or S3 compatible storage token.
+## 🛠️ Local Setup
 
-## Setup Instructions
+1.  **Clone & Install:**
+    ```bash
+    git clone ...
+    npm install
+    ```
 
-### 1. Database Setup (Neon/Postgres)
+2.  **Environment Variables (`.env`):**
+    ```env
+    DATABASE_URL="postgresql://user:pass@ep-host.region.aws.neon.tech/neondb?sslmode=require"
+    OPENAI_API_KEY="sk-..."
+    BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
+    ADMIN_KEY="my-secret-password"
+    ```
 
-You MUST enable the `vector` extension before deploying the schema. Run this SQL in your database console:
+3.  **Database Setup:**
+    *   Go to Neon SQL Editor and run: `CREATE EXTENSION vector;`
+    *   Push schema: `npx prisma db push`
 
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-```
+4.  **Run:**
+    ```bash
+    npm run dev
+    ```
 
-### 2. Configure Environment
+## 📦 Deployment (Vercel)
 
-Copy `.env.example` to `.env` and fill in the values:
+1.  Import project to Vercel.
+2.  Add Environmental Variables (same as above).
+3.  Deploy! (The build ensures dynamic rendering for API routes).
 
-```bash
-cp .env.example .env
-```
-
-- `DATABASE_URL`: Your Postgres connection string.
-- `OPENAI_API_KEY`: start with `sk-...`
-- `BLOB_READ_WRITE_TOKEN`: Your Vercel Blob token (or similar).
-
-### 3. Install & Init
-
-```bash
-# Install dependencies
-npm install
-
-# Push schema to database
-npx prisma db push
-```
-
-### 4. Run Locally
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:3000/documents` to start.
-
-## Deployment (Vercel)
-
-1. Push to GitHub.
-2. Import project in Vercel.
-3. Add Environment Variables in Vercel Project Settings.
-4. **Build Command**: `npx prisma generate && next build` (Next.js default usually works, but ensure prisma generate runs).
-5. Deploy.
-
-## API Reference
-
-- `POST /api/documents/upload`: Upload PDF.
-- `POST /api/documents/[id]/ingest`: Trigger processing.
-- `POST /api/chat`: Chat with documents.
-  - Body: `{ "message": "...", "workspaceId": "..." }`
-
-## Commands
-
-- **Prisma Studio** (View DB): `npx prisma studio`
-- **Reset DB**: `npx prisma migrate reset` (Caution!)
-
+## ⚠️ Admin Access
+To access the dashboard, visit `/login` and enter your `ADMIN_KEY`.

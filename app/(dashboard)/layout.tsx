@@ -16,7 +16,7 @@ export default function DashboardLayout({
                             <FileText size={20} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Antigravity</h1>
+                            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Yuri</h1>
                             <p className="text-xs text-gray-500 font-medium tracking-wide text-blue-600 dark:text-blue-400">RAG Workspace</p>
                         </div>
                     </Link>

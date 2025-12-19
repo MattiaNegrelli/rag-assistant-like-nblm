@@ -1,8 +1,6 @@
 import OpenAI from "openai";
 
 // Initialize OpenAI client
-// Note: In serverless (Vercel), we shouldn't keep a global stateful connection if unnecessary, 
-// but instantiating this per request is fine.
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });

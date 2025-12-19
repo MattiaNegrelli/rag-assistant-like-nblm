@@ -16,8 +16,6 @@ export async function POST(req: NextRequest) {
         const queryEmbedding = await getEmbeddings(message);
 
         // 2. Vector Search (Hybrid or pure Similarity)
-        // We use pgvector cosine similarity (<=>)
-        // We need to type the result outcome
         const results = await db.$queryRaw`
       SELECT 
         dc."documentId",

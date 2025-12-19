@@ -17,9 +17,7 @@ export async function POST(req: NextRequest) {
         // 1. Upload to Blob Storage
         const blobUrl = await storage.upload(file, `workspaces/${workspaceId}/${file.name}`);
 
-        // 2. Setup/Get Workspace (For MVP, ensure it exists or create one if we are just starting)
-        // Normally workspace comes from Auth, but MVP requests passing it or ensuring integrity.
-        // Let's check if workspace exists, if not create it for MVP flow ease.
+        // 2. Setup/Get Workspace
         let workspace = await db.workspace.findUnique({ where: { id: workspaceId } });
         if (!workspace) {
             workspace = await db.workspace.create({

@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-    title: 'Proprietary RAG System',
-    description: 'Internal Document Assistant',
+    title: 'Yuri RAG Workspace',
+    description: 'Proprietary RAG System',
 }
 
 export default function RootLayout({
