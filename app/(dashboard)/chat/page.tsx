@@ -1,12 +1,32 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Sparkles, BookOpen, ChevronRight, StopCircle, RefreshCw } from 'lucide-react';
+import { Send, User, Sparkles, BookOpen, ChevronRight, StopCircle, RefreshCw, Trash2, Copy, Check } from 'lucide-react';
 
 type Message = {
     role: 'user' | 'assistant';
     content: string;
     sources?: { documentName: string; page: number; quote: string }[];
+};
+
+const CopyButton = ({ text }: { text: string }) => {
+    const [copied, setCopied] = useState(false);
+
+    const onCopy = () => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <button
+            onClick={onCopy}
+            className="p-1.5 text-gray-400 hover:text-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            title="Copy to clipboard"
+        >
+            {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+        </button>
+    );
 };
 
 export default function ChatPage() {
@@ -40,7 +60,7 @@ export default function ChatPage() {
             setMessages(data.map((m: any) => ({
                 role: m.role,
                 content: m.content,
-                sources: m.sources ? JSON.parse(JSON.stringify(m.sources)) : undefined // Handle JSON/Object nuances
+                sources: m.sources ? (typeof m.sources === 'string' ? JSON.parse(m.sources) : m.sources) : undefined
             })));
         }
     };
@@ -57,6 +77,27 @@ export default function ChatPage() {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, loading]);
+
+    // Delete conversation
+    const deleteConversation = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('Are you sure you want to delete this conversation?')) return;
+
+        try {
+            const res = await fetch(`/api/conversations/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                setConversations(prev => prev.filter(c => c.id !== id));
+                if (currentConversationId === id) {
+                    startNewChat();
+                }
+            }
+        } catch (error) {
+            console.error('Failed to delete conversation:', error);
+        }
+    };
 
     // Focus input on mount
     useEffect(() => {
@@ -128,9 +169,19 @@ export default function ChatPage() {
                             className={`w-full text-left px-3 py-2.5 rounded-lg text-sm truncate transition-colors ${currentConversationId === conv.id
                                 ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white font-medium'
                                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-800/50'
-                                }`}
+                                } group`}
                         >
-                            {conv.title}
+                            <div className="flex items-center justify-between w-full overflow-hidden">
+                                <span className="truncate">{conv.title}</span>
+                                <div
+                                    role="button"
+                                    onClick={(e) => deleteConversation(conv.id, e)}
+                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-all text-gray-400 hover:text-red-500"
+                                    title="Delete conversation"
+                                >
+                                    <Trash2 size={13} />
+                                </div>
+                            </div>
                         </button>
                     ))}
                     {conversations.length === 0 && (
@@ -193,11 +244,19 @@ export default function ChatPage() {
 
                             <div className={`space-y-2 max-w-[85%] ${msg.role === 'user' ? 'order-1' : 'order-2'}`}>
                                 {msg.role === 'user' ? (
-                                    <div className="bg-blue-600 text-white px-6 py-3.5 rounded-2xl rounded-tr-sm shadow-md text-[15px] leading-relaxed">
+                                    <div className={`bg-blue-600 text-white px-6 py-3.5 rounded-2xl rounded-tr-sm shadow-md text-[15px] leading-relaxed relative group`}>
                                         {msg.content}
+                                        <div className="absolute top-2 right-full mr-2">
+                                            <div className="bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-100 dark:border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <CopyButton text={msg.content} />
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-6 py-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-800 dark:text-gray-200 text-[15px] leading-7">
+                                    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-6 py-5 rounded-2xl rounded-tl-sm shadow-sm text-gray-800 dark:text-gray-200 text-[15px] leading-7 relative group">
+                                        <div className="absolute top-4 right-4 group-hover:opacity-100 opacity-0 transition-opacity">
+                                            <CopyButton text={msg.content} />
+                                        </div>
                                         {msg.content}
 
                                         {/* Citations */}
@@ -207,7 +266,6 @@ export default function ChatPage() {
                                                     <BookOpen size={12} /> Sources Verified
                                                 </p>
                                                 <div className="grid gap-2">
-                                                    {/* @ts-ignore */}
                                                     {msg.sources.map((src: any, idx: number) => (
                                                         <div key={idx} className="group flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-100 dark:border-gray-700/50 hover:border-blue-200 dark:hover:border-blue-500/30 transition-colors cursor-help">
                                                             <div className="mt-0.5 min-w-[20px] h-5 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-500">
@@ -249,7 +307,8 @@ export default function ChatPage() {
                                                         body: JSON.stringify({
                                                             message: lastMsg,
                                                             workspaceId: WORKSPACE_ID,
-                                                            conversationId: currentConversationId
+                                                            conversationId: currentConversationId,
+                                                            isRegeneration: true
                                                         }),
                                                     })
                                                         .then(res => res.json())

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
-        const { message, workspaceId, conversationId } = await req.json();
+        const { message, workspaceId, conversationId, isRegeneration } = await req.json();
 
         if (!message || !workspaceId) {
             return NextResponse.json({ error: 'Missing message or workspaceId' }, { status: 400 });
@@ -24,14 +24,30 @@ export async function POST(req: NextRequest) {
             currentConversationId = newConversation.id;
         }
 
-        // 1. Save User Message
-        await db.message.create({
-            data: {
-                conversationId: currentConversationId,
-                role: 'user',
-                content: message,
+        // 1. Handle Message History (Regeneration vs New Logic)
+        if (isRegeneration) {
+            // Delete the last assistant message to replace it
+            const lastMessage = await db.message.findFirst({
+                where: { conversationId: currentConversationId, role: 'assistant' },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            if (lastMessage) {
+                await db.message.delete({
+                    where: { id: lastMessage.id }
+                });
             }
-        });
+            // SKIP creating a new user message because it already exists
+        } else {
+            // 1. Save User Message (Normal Flow)
+            await db.message.create({
+                data: {
+                    conversationId: currentConversationId,
+                    role: 'user',
+                    content: message,
+                }
+            });
+        }
 
         // 2. Embed Query
         const queryEmbedding = await getEmbeddings(message);
@@ -75,7 +91,7 @@ export async function POST(req: NextRequest) {
                 conversationId: currentConversationId,
                 role: 'assistant',
                 content: answer,
-                sources: sources ? JSON.stringify(sources) : undefined,
+                sources: sources ? sources : undefined,
             }
         });
 
