@@ -7,14 +7,23 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const workspaceId = searchParams.get('workspaceId');
+        const search = searchParams.get('search');
 
         if (!workspaceId) {
             return NextResponse.json({ error: 'Missing workspaceId' }, { status: 400 });
         }
 
+        const whereClause: any = { workspaceId };
+        if (search) {
+            whereClause.originalName = {
+                contains: search,
+                mode: 'insensitive',
+            };
+        }
+
         const documents = await db.document.findMany({
-            where: { workspaceId },
-            orderBy: { createdAt: 'desc' },
+            where: whereClause,
+            orderBy: { originalName: 'asc' },
         });
 
         return NextResponse.json(documents);

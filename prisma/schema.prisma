@@ -17,6 +17,35 @@ model Workspace {
   users     User[]
   documents Document[]
   chunks    DocumentChunk[]
+  conversations Conversation[]
+}
+
+model Conversation {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  
+  title       String   @default("New Chat")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt // Used for sorting sidebar
+  
+  messages    Message[]
+  
+  @@index([workspaceId])
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role           String // "user" or "assistant"
+  content        String
+  sources        Json?  // Storing source citations
+  
+  createdAt      DateTime @default(now())
+  
+  @@index([conversationId])
 }
 
 model User {

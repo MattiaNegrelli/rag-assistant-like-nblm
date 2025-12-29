@@ -6,16 +6,37 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
-        const { message, workspaceId } = await req.json();
+        const { message, workspaceId, conversationId } = await req.json();
 
         if (!message || !workspaceId) {
             return NextResponse.json({ error: 'Missing message or workspaceId' }, { status: 400 });
         }
 
-        // 1. Embed Query
+        // 0. Resolve Conversation
+        let currentConversationId = conversationId;
+        if (!currentConversationId) {
+            const newConversation = await db.conversation.create({
+                data: {
+                    workspaceId,
+                    title: message.slice(0, 50) + (message.length > 50 ? '...' : ''), // Simple title gen
+                }
+            });
+            currentConversationId = newConversation.id;
+        }
+
+        // 1. Save User Message
+        await db.message.create({
+            data: {
+                conversationId: currentConversationId,
+                role: 'user',
+                content: message,
+            }
+        });
+
+        // 2. Embed Query
         const queryEmbedding = await getEmbeddings(message);
 
-        // 2. Vector Search (Hybrid or pure Similarity)
+        // 3. Vector Search
         const results = await db.$queryRaw`
       SELECT 
         dc."documentId",
@@ -31,25 +52,44 @@ export async function POST(req: NextRequest) {
       LIMIT 10;
     ` as any[];
 
-        // 3. Filter by threshold (optional, but good practice)
-        const validResults = results.filter(r => r.similarity > 0.5); // Loose threshold for MVP
+        // 4. Generate Answer
+        const validResults = results.filter(r => r.similarity > 0.5);
+        let answer = "I couldn't find any relevant information in the uploaded documents.";
+        let sources = [];
 
-        if (validResults.length === 0) {
-            return NextResponse.json({
-                answer: "I couldn't find any relevant information in the uploaded documents for this workspace.",
-                sources: []
-            });
+        if (validResults.length > 0) {
+            // ... Call LLM
+            const ragResponse = await generateRAGResponse(message, validResults.map(r => ({
+                documentId: r.documentId,
+                documentName: r.documentName,
+                page: r.page,
+                text: r.text
+            })));
+            answer = ragResponse.answer;
+            sources = ragResponse.sources;
         }
 
-        // 4. Generate Answer
-        const response = await generateRAGResponse(message, validResults.map(r => ({
-            documentId: r.documentId,
-            documentName: r.documentName,
-            page: r.page,
-            text: r.text
-        })));
+        // 5. Save Assistant Message
+        await db.message.create({
+            data: {
+                conversationId: currentConversationId,
+                role: 'assistant',
+                content: answer,
+                sources: sources ? JSON.stringify(sources) : undefined,
+            }
+        });
 
-        return NextResponse.json(response);
+        // 6. Update Conversation Timestamp
+        await db.conversation.update({
+            where: { id: currentConversationId },
+            data: { updatedAt: new Date() }
+        });
+
+        return NextResponse.json({
+            answer,
+            sources,
+            conversationId: currentConversationId
+        });
 
     } catch (error) {
         console.error('Chat error:', error);
