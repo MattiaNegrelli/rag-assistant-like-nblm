@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { FileText, UploadCloud, Loader2, CheckCircle2, AlertCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { FileText, UploadCloud, Loader2, CheckCircle2, AlertCircle, RefreshCw, Trash2, X } from 'lucide-react';
 
 type Document = {
     id: string;
@@ -11,11 +11,13 @@ type Document = {
     pageCount: number;
     createdAt: string;
     originalName: string;
+    storageUrl: string;
 };
 
 export default function DocumentsPage() {
     const [uploading, setUploading] = useState(false);
     const [documents, setDocuments] = useState<Document[]>([]);
+    const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
     const WORKSPACE_ID = "default-workspace";
 
     const fetchDocuments = useCallback(async () => {
@@ -132,7 +134,8 @@ export default function DocumentsPage() {
                 {documents.map((doc) => (
                     <div
                         key={doc.id}
-                        className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden"
+                        onClick={() => setSelectedDocument(doc)}
+                        className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden cursor-pointer"
                     >
                         <div className="flex items-start justify-between mb-4">
                             <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500">
@@ -171,6 +174,41 @@ export default function DocumentsPage() {
                     </div>
                 ))}
             </div>
+
+            {/* Document Modal */}
+            {selectedDocument && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedDocument(null)}>
+                    <div
+                        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-500">
+                                    <FileText size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white leading-tight">{selectedDocument.originalName}</h3>
+                                    <p className="text-xs text-gray-500">{selectedDocument.pageCount} pages • {new Date(selectedDocument.createdAt).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedDocument(null)}
+                                className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 bg-gray-100 dark:bg-gray-950 p-0 relative">
+                            <iframe
+                                src={`/api/documents/${selectedDocument.id}/preview`}
+                                className="w-full h-full border-0"
+                                title="Document Preview"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

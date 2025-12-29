@@ -1,4 +1,4 @@
-# Yuri RAG Workspace - Proprietary AI Assistant
+# Kraken RAG Workspace - Proprietary AI Assistant
 
 An Enterprise RAG (Retrieval-Augmented Generation) system built for **Mattia Negrelli** to analyze proprietary PDFs and product catalogs. This system allows clients to upload their knowledge base and chat with it using an AI assistant that cites its sources.
 
